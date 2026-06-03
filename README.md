@@ -4,7 +4,6 @@
 
 **CiteRAG** is an end-to-end **Retrieval-Augmented Generation (RAG)** pipeline with **semantic retrieval**, document chunking, and **page-level citations**. Built with LangChain, FAISS, Hugging Face embeddings, and Ollama for fully local, grounded inference.
 
-Repository: [github.com/Sepovsky/CiteRAG](https://github.com/Sepovsky/CiteRAG)
 
 ---
 
