@@ -1,24 +1,26 @@
-from qa import ask_pdf
+from qa import ask_document
+
 
 def main():
-    pdf_path = "data/sigcomm16_cs2p.pdf"
+    document_path = "data/sigcomm16_cs2p.pdf"
 
-    print("Welcome to the PDF QA system!")
-    print("Enter 'q' to quit")
+    print("CiteRAG — Citation-Grounded RAG for Document QA")
+    print("Answers include page-level citations. Enter 'q' to quit.\n")
 
     while True:
-        question = input("Enter your question: ")
-        if question.lower() == 'q':
+        question = input("Question: ").strip()
+        if question.lower() == "q":
             print("Goodbye!")
             break
+        if not question:
+            continue
 
-        answer, docs = ask_pdf(pdf_path, question)
+        answer, docs = ask_document(document_path, question)
         print("\nAnswer:\n")
         print(answer)
 
-        print("\nSources:")
-        pages = sorted(set(doc.metadata.get("page", "N/A") for doc in docs))
-        print(pages)
+        pages = sorted({doc.metadata.get("page", "N/A") for doc in docs})
+        print("\nRetrieved source pages:", pages)
         print("\n" + "=" * 60 + "\n")
 
 

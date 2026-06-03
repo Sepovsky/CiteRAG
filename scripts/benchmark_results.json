@@ -1,0 +1,126 @@
+{
+  "summary": {
+    "pdf_pages": 14,
+    "chunk_count": 119,
+    "chunk_size": 800,
+    "chunk_overlap": 150,
+    "top_k": 3,
+    "index_build_s": 2.97,
+    "accuracy": {
+      "correct": 5,
+      "total": 8,
+      "rate": 0.62
+    },
+    "warm_query_latency_s": {
+      "median": 16.6,
+      "mean": 16.22,
+      "min": 10.54,
+      "max": 22.39
+    },
+    "cold_start_latency_s": 17.05,
+    "model": "llama3.1",
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2"
+  },
+  "results": [
+    {
+      "id": "problem",
+      "question": "What problem does this paper solve?",
+      "answer": "The problem that this paper solves is predicting the throughput of a session in a network. The goal is to minimize the absolute normalized prediction error between the predicted and actual throughputs.\n\nPage 5, Page 6.",
+      "correct": true,
+      "latency_s": 18.77,
+      "source_pages": [
+        5,
+        6
+      ],
+      "scoring_notes": "missing group 2: ['video', 'streaming', 'internet video']"
+    },
+    {
+      "id": "cs2p_definition",
+      "question": "What is CS2P?",
+      "answer": "CS2P can be regarded as a middle ground between centralized video control platforms and decentralized player-based bitrate adaptation. It borrows benefits from global view architectures to train models, but \"actuation\" happens in a decentralized manner without global coordination. CS2P is designed to improve midstream prediction by learning Hidden-Markov-Model (HMM) for each cluster.\n\nUsed pages: 5, 7",
+      "correct": true,
+      "latency_s": 22.39,
+      "source_pages": [
+        1,
+        5,
+        7
+      ],
+      "scoring_notes": "missing group 3: ['data-driven', 'data driven']"
+    },
+    {
+      "id": "dataset",
+      "question": "What dataset or trace is used?",
+      "answer": "The dataset used is a proprietary dataset of HTTP throughput measurement from the operational platform of iQIYI collected in September 2015.\n\nPage numbers used: Page 2.",
+      "correct": false,
+      "latency_s": 14.73,
+      "source_pages": [
+        2,
+        11,
+        12
+      ],
+      "scoring_notes": "missing group 1: ['20m', '20 m', '20 million', '20m+']; missing group 2: ['session']"
+    },
+    {
+      "id": "midstream_model",
+      "question": "What model is used for midstream throughput prediction?",
+      "answer": "The model used for midstream throughput prediction is a Hidden-Markov-Model (HMM) for each cluster to model the stateful evolution of intra-session throughput.\n\nPage 1.",
+      "correct": true,
+      "latency_s": 14.34,
+      "source_pages": [
+        0,
+        1
+      ],
+      "scoring_notes": "all required concept groups matched"
+    },
+    {
+      "id": "initial_error_improvement",
+      "question": "By how much does CS2P reduce median initial throughput prediction error compared to prior approaches?",
+      "answer": "CS2P reduces median initial throughput prediction error by 40% compared to state-of-art predictors.\n\nPage 8.",
+      "correct": true,
+      "latency_s": 11.65,
+      "source_pages": [
+        8,
+        9
+      ],
+      "scoring_notes": "all required concept groups matched"
+    },
+    {
+      "id": "midstream_error_improvement",
+      "question": "By how much does CS2P reduce median midstream throughput prediction error?",
+      "answer": "CS2P reduces median midstream throughput prediction error by 50% compared to state-of-art predictors.\n\nPage 8 and Page 9.",
+      "correct": true,
+      "latency_s": 10.54,
+      "source_pages": [
+        8,
+        9,
+        10
+      ],
+      "scoring_notes": "all required concept groups matched"
+    },
+    {
+      "id": "qoe_improvement",
+      "question": "What QoE improvement does CS2P achieve over buffer-based adaptation?",
+      "answer": "According to Figure 10a, CS2P significantly outperforms CFA and buffer-based adaptation. The reason is that CFA relies on QoE prediction, which is difficult to achieve accurately without video-specific features. However, CS2P relies on throughput prediction using the proposed algorithm.\n\nPage numbers used: 10",
+      "correct": false,
+      "latency_s": 18.82,
+      "source_pages": [
+        2,
+        10
+      ],
+      "scoring_notes": "missing group 1: ['14%', '14 percent', 'fourteen percent']"
+    },
+    {
+      "id": "contributions",
+      "question": "What are the main contributions of this paper?",
+      "answer": "The main contributions of this paper are:\n\n* A prediction algorithm that can capture high-dimensional effects by combining multiple features rather than treating them individually.\n* The use of a 6-state Hidden Markov Model (HMM) to model network behavior and improve prediction accuracy.\n\nPage numbers used: 4, 10",
+      "correct": false,
+      "latency_s": 18.47,
+      "source_pages": [
+        4,
+        10,
+        12
+      ],
+      "scoring_notes": "missing group 1: ['throughput', 'dataset', '20m', 'session']; missing group 3: ['prototype', 'evaluation', 'experiment', 'simulation']"
+    }
+  ]
+}

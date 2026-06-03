@@ -1,8 +1,10 @@
-# RAG PDF Q&A with LangChain
+# CiteRAG — Citation-Grounded RAG for Document QA
 
-> Ask questions about any PDF — fully local, no API key required.
+> Verifiable, source-grounded answers from PDF documents — fully local, no API key required.
 
-A clean, end-to-end **Retrieval-Augmented Generation (RAG)** pipeline built with LangChain, FAISS, local embeddings, and Ollama. Designed for learning the core mechanics of RAG in a practical, readable codebase.
+**CiteRAG** is an end-to-end **Retrieval-Augmented Generation (RAG)** pipeline with **semantic retrieval**, document chunking, and **page-level citations**. Built with LangChain, FAISS, Hugging Face embeddings, and Ollama for fully local, grounded inference.
+
+Repository: [github.com/Sepovsky/CiteRAG](https://github.com/Sepovsky/CiteRAG)
 
 ---
 
@@ -11,21 +13,20 @@ A clean, end-to-end **Retrieval-Augmented Generation (RAG)** pipeline built with
 ```
 PDF → Load → Chunk → Embed → FAISS index
                                    ↓
-              User question → Retrieve top-k chunks
+              User question → Semantic retrieval (top-k)
                                    ↓
-                       Ollama (Llama 3.1) → Answer + source pages
+              Ollama (Llama 3.1) → Citation-grounded answer + page sources
 ```
 
 ---
 
 ## Features
 
-- Parse and chunk PDF documents
-- Generate embeddings locally via Hugging Face `sentence-transformers`
-- Store and search vectors with FAISS
-- Answer questions using a local LLM through Ollama
-- Display source page numbers for every answer
-- Runs entirely offline — no API key needed
+- End-to-end RAG pipeline with semantic chunk retrieval
+- Page-level citations on every answer for verifiable, source-grounded responses
+- Local Hugging Face `sentence-transformers` embeddings
+- FAISS vector search for fast similarity retrieval
+- Fully offline inference via Ollama — no cloud API key needed
 
 ---
 
@@ -35,7 +36,7 @@ PDF → Load → Chunk → Embed → FAISS index
 |---|---|
 | Orchestration | LangChain |
 | PDF parsing | PyPDF |
-| Embeddings | sentence-transformers (HuggingFace) |
+| Embeddings | sentence-transformers (Hugging Face) |
 | Vector store | FAISS |
 | LLM runtime | Ollama |
 | Model | Llama 3.1 |
@@ -45,16 +46,17 @@ PDF → Load → Chunk → Embed → FAISS index
 ## Project structure
 
 ```
-rag_pdf_langchain/
+CiteRAG/
 ├── app/
 │   ├── ingest.py       # Load PDF and split into chunks
-│   ├── retrieve.py     # Build FAISS index and retrieve chunks
-│   ├── qa.py           # Combine retrieval + LLM to answer questions
-│   └── main.py         # Interactive CLI loop
+│   ├── retrieve.py     # FAISS index + semantic retrieval
+│   ├── qa.py           # Citation-grounded Q&A
+│   └── main.py         # Interactive CLI
 ├── data/
 │   └── sample.pdf
+├── scripts/
+│   └── benchmark.py    # Accuracy and latency eval
 ├── vector_store/
-├── .env
 ├── requirements.txt
 └── README.md
 ```
@@ -63,11 +65,11 @@ rag_pdf_langchain/
 
 ## Setup
 
-### 1. Clone and create project folders
+### 1. Clone the repository
 
 ```bash
-git clone <your-repo-url>
-cd rag_pdf_langchain
+git clone https://github.com/Sepovsky/CiteRAG.git
+cd CiteRAG
 mkdir -p data vector_store
 ```
 
@@ -88,21 +90,13 @@ pip install -r requirements.txt
 ### 4. Install Ollama and pull the model
 
 ```bash
-# Install (Linux)
 curl -fsSL https://ollama.com/install.sh | sh
-
-# Verify
-ollama --version
-
-# Pull Llama 3.1
 ollama pull llama3.1
 ```
 
 > For macOS or Windows, download from [ollama.com](https://ollama.com).
 
 ### 5. Add your PDF
-
-Place any PDF in the `data/` folder:
 
 ```bash
 cp your-document.pdf data/
@@ -118,13 +112,13 @@ Run each step individually to test, or jump straight to the interactive CLI:
 # Step 1 — test PDF loading and chunking
 python app/ingest.py
 
-# Step 2 — test retrieval
+# Step 2 — test semantic retrieval
 python app/retrieve.py
 
-# Step 3 — test question answering
+# Step 3 — test citation-grounded Q&A
 python app/qa.py
 
-# Step 4 — interactive Q&A
+# Step 4 — interactive CLI
 python app/main.py
 ```
 
@@ -135,49 +129,16 @@ python app/main.py
 - What are the main contributions?
 - What dataset or traces are used?
 - What are the key results?
-- What limitations are discussed?
 
 ---
 
-## Why chunking matters
+## Benchmark
 
-Sending a full PDF to an LLM is expensive and noisy. Chunking solves this by:
+Run the accuracy and latency benchmark (requires Ollama and a PDF in `data/`):
 
-- Breaking the document into smaller, searchable pieces
-- Improving retrieval precision
-- Reducing irrelevant context sent to the model
-- Lowering compute cost and latency
-
-Answer quality is directly tied to retrieval quality — better chunks lead to better answers.
-
----
-
-## Improving results
-
-Some next steps to explore:
-
-- [ ] Save and reload the FAISS index to avoid rebuilding on every run
-- [ ] Try stronger embedding models
-- [ ] Retrieve more candidates and apply reranking
-- [ ] Tune chunk size and overlap
-- [ ] Add hybrid search (keyword + semantic)
-- [ ] Support multiple PDFs
-- [ ] Add a Streamlit UI
-- [ ] Improve page-level citations
-- [ ] Test stronger Ollama models (e.g. Llama 3.3, Mistral)
-
----
-
-## Learning goals
-
-This project is a practical introduction to:
-
-- What RAG is and why it works
-- How text chunking affects retrieval quality
-- How embeddings represent meaning as vectors
-- How vector similarity search works (FAISS)
-- How retrieved context grounds LLM answers
-- How to build a fully local, privacy-friendly Q&A system
+```bash
+python scripts/benchmark.py
+```
 
 ---
 
