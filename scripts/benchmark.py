@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Benchmark CiteRAG accuracy and end-to-end latency on the CS2P SIGCOMM paper."""
+"""Benchmark CiteRAG accuracy and end-to-end latency on any PDF in the eval set."""
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import statistics
@@ -11,94 +12,18 @@ import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+import pdfplumber
+
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "app"
 sys.path.insert(0, str(APP))
 
-from langchain_ollama import ChatOllama
+from qa import ask_document, format_context, build_prompt
 from ingest import load_pdf, split_pdf
-from retrieve import build_vectorstore
-from qa import build_prompt, format_context
+from retrieve import HybridRetriever
 
-PDF_PATH = ROOT / "data" / "sigcomm16_cs2p.pdf"
-RESULTS_PATH = Path(__file__).resolve().parent / "benchmark_results.json"
-
-# Ground truth derived from sigcomm16_cs2p.pdf (CS2P, SIGCOMM 2016)
-EVAL_QUESTIONS = [
-    {
-        "id": "problem",
-        "question": "What problem does this paper solve?",
-        "must_match_any": [
-            ["bitrate", "throughput"],
-            ["video", "streaming", "internet video"],
-            ["adaptation", "selection", "prediction"],
-        ],
-        "must_not_contain": ["could not find"],
-    },
-    {
-        "id": "cs2p_definition",
-        "question": "What is CS2P?",
-        "must_match_any": [
-            ["cs2p"],
-            ["throughput", "prediction"],
-            ["data-driven", "data driven"],
-        ],
-        "must_not_contain": ["could not find"],
-    },
-    {
-        "id": "dataset",
-        "question": "What dataset or trace is used?",
-        "must_match_any": [
-            ["20m", "20 m", "20 million", "20m+"],
-            ["session"],
-            ["iqiyi", "i qiyi"],
-        ],
-        "must_not_contain": ["could not find"],
-    },
-    {
-        "id": "midstream_model",
-        "question": "What model is used for midstream throughput prediction?",
-        "must_match_any": [
-            ["hidden markov", "hmm", "markov model"],
-        ],
-        "must_not_contain": ["could not find"],
-    },
-    {
-        "id": "initial_error_improvement",
-        "question": "By how much does CS2P reduce median initial throughput prediction error compared to prior approaches?",
-        "must_match_any": [
-            ["40%", "40 percent", "forty percent"],
-        ],
-        "must_not_contain": ["could not find"],
-    },
-    {
-        "id": "midstream_error_improvement",
-        "question": "By how much does CS2P reduce median midstream throughput prediction error?",
-        "must_match_any": [
-            ["50%", "50 percent", "fifty percent"],
-        ],
-        "must_not_contain": ["could not find"],
-    },
-    {
-        "id": "qoe_improvement",
-        "question": "What QoE improvement does CS2P achieve over buffer-based adaptation?",
-        "must_match_any": [
-            ["14%", "14 percent", "fourteen percent"],
-            ["buffer", "bb"],
-        ],
-        "must_not_contain": ["could not find"],
-    },
-    {
-        "id": "contributions",
-        "question": "What are the main contributions of this paper?",
-        "must_match_any": [
-            ["throughput", "dataset", "20m", "session"],
-            ["cs2p", "predictor", "prediction"],
-            ["prototype", "evaluation", "experiment", "simulation"],
-        ],
-        "must_not_contain": ["could not find"],
-    },
-]
+EVAL_SET_PATH = Path(__file__).resolve().parent / "eval_set.json"
+RESULTS_DIR = Path(__file__).resolve().parent
 
 
 @dataclass
@@ -137,47 +62,46 @@ def score_answer(answer: str, spec: dict) -> tuple[bool, str]:
     return ok, "; ".join(notes) if notes else "all required concept groups matched"
 
 
-def answer_question(retriever, question: str) -> tuple[str, list, float]:
+async def answer_question(pdf_path: str, question: str) -> tuple[str, list, float]:
     start = time.perf_counter()
-    docs = retriever.invoke(question)
-    context = format_context(docs)
-    llm = ChatOllama(model="llama3.1", temperature=0.0)
-    response = llm.invoke(build_prompt(context, question))
+    answer, docs = await ask_document(pdf_path, question, force_rebuild=False)
     elapsed = time.perf_counter() - start
     pages = sorted({doc.metadata.get("page", "N/A") for doc in docs})
-    return response.content, pages, elapsed
+    return answer, pages, elapsed
 
 
-def run_cold_latency(pdf_path: Path, question: str) -> float:
-    """Current app behavior: rebuild index on every question."""
-    from qa import ask_document
+async def main_async(pdf_path: Path) -> int:
+    pdf_name = pdf_path.name
 
-    start = time.perf_counter()
-    ask_document(str(pdf_path), question)
-    return time.perf_counter() - start
+    with open(EVAL_SET_PATH) as f:
+        all_evals = json.load(f)
 
-
-def main() -> int:
-    if not PDF_PATH.exists():
-        print(f"ERROR: PDF not found at {PDF_PATH}")
+    if pdf_name not in all_evals:
+        print(f"ERROR: No eval questions for {pdf_name} in {EVAL_SET_PATH}")
+        available = [k for k in all_evals if k != "_description" and k != "_scoring"]
+        print(f"Available PDFs: {available}")
         return 1
 
-    pages = load_pdf(str(PDF_PATH))
+    eval_questions = all_evals[pdf_name]
+
+    # --- PDF overview ---
+    pages = load_pdf(str(pdf_path))
     splits = split_pdf(pages)
-    print(f"PDF: {len(pages)} pages -> {len(splits)} chunks (800 char, 150 overlap)")
+    print(f"PDF: {pdf_path.name} — {len(pages)} pages -> {len(splits)} chunks (800 char, 150 overlap)")
 
-    index_start = time.perf_counter()
-    vectorstore = build_vectorstore(str(PDF_PATH))
-    index_build_s = time.perf_counter() - index_start
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
-    print(f"Index build: {index_build_s:.2f}s")
+    # --- Warm-up / cache build ---
+    build_start = time.perf_counter()
+    retriever = HybridRetriever(str(pdf_path), force_rebuild=False)
+    build_s = time.perf_counter() - build_start
+    print(f"Index build / cache load: {build_s:.2f}s")
 
+    # --- Run questions ---
     results: list[QuestionResult] = []
     latencies: list[float] = []
 
-    for spec in EVAL_QUESTIONS:
+    for spec in eval_questions:
         print(f"\nQ: {spec['question']}")
-        answer, pages_used, latency = answer_question(retriever, spec["question"])
+        answer, pages_used, latency = await answer_question(str(pdf_path), spec["question"])
         correct, notes = score_answer(answer, spec)
         latencies.append(latency)
         results.append(
@@ -198,18 +122,24 @@ def main() -> int:
     correct_count = sum(1 for r in results if r.correct)
     total = len(results)
 
-    # Cold-start latency: one sample using current qa.py behavior
-    print("\nMeasuring cold-start latency (rebuilds index each query, current qa.py)...")
-    cold_latency = run_cold_latency(PDF_PATH, EVAL_QUESTIONS[0]["question"])
+    # --- Cold-start sample ---
+    print("\nMeasuring cold-start latency (rebuilds index)...")
+    cold_start = time.perf_counter()
+    await ask_document(str(pdf_path), eval_questions[0]["question"], force_rebuild=True)
+    cold_latency = time.perf_counter() - cold_start
     print(f"  cold_start_sample: {cold_latency:.2f}s")
 
+    # --- Summary ---
     summary = {
+        "pdf": pdf_name,
         "pdf_pages": len(pages),
         "chunk_count": len(splits),
         "chunk_size": 800,
         "chunk_overlap": 150,
-        "top_k": 3,
-        "index_build_s": round(index_build_s, 2),
+        "top_k_dense": 10,
+        "top_k_sparse": 10,
+        "top_k_rerank": 3,
+        "index_build_or_load_s": round(build_s, 2),
         "accuracy": {
             "correct": correct_count,
             "total": total,
@@ -224,37 +154,38 @@ def main() -> int:
         "cold_start_latency_s": round(cold_latency, 2),
         "model": "llama3.1",
         "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+        "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
     }
 
+    results_path = RESULTS_DIR / f"benchmark_{pdf_path.stem}.json"
     output = {
         "summary": summary,
         "results": [asdict(r) for r in results],
     }
-    RESULTS_PATH.write_text(json.dumps(output, indent=2))
-    print(f"\nWrote {RESULTS_PATH}")
+    results_path.write_text(json.dumps(output, indent=2))
+    print(f"\nWrote {results_path}")
 
     print("\n" + "=" * 72)
     print("CiteRAG — CV METRICS (measured)")
     print("=" * 72)
     print(f"Accuracy: {correct_count}/{total} ({100 * correct_count / total:.0f}%)")
     print(f"Warm Q&A latency (index cached): median {summary['warm_query_latency_s']['median']}s")
-    print(f"Cold-start Q&A latency (current qa.py): {summary['cold_start_latency_s']}s")
-    print(f"Index build: {summary['index_build_s']}s | {len(pages)} pages -> {len(splits)} chunks")
-
-    print("\n--- Suggested CV bullets ---\n")
-    print(
-        "Built an end-to-end RAG pipeline with semantic retrieval, document chunking, "
-        "and page-level citations for verifiable, source-grounded answers."
-    )
-    print(
-        "Engineered the retrieval stack with LangChain, FAISS, and Hugging Face embeddings, "
-        "served via Ollama for fully local, grounded inference."
-    )
-    print(
-        f"\n(Eval: {correct_count}/{total} answer accuracy on a 14-page SIGCOMM paper, "
-        f"~{summary['warm_query_latency_s']['median']}s end-to-end latency, zero cloud cost.)"
-    )
+    print(f"Cold-start Q&A latency: {summary['cold_start_latency_s']}s")
+    print(f"Index build/load: {summary['index_build_or_load_s']}s | {len(pages)} pages -> {len(splits)} chunks")
     return 0
+
+
+def main() -> int:
+    if len(sys.argv) > 1:
+        pdf_path = Path(sys.argv[1])
+    else:
+        pdf_path = ROOT / "data" / "sigcomm16_cs2p.pdf"
+
+    if not pdf_path.exists():
+        print(f"ERROR: PDF not found at {pdf_path}")
+        return 1
+
+    return asyncio.run(main_async(pdf_path))
 
 
 if __name__ == "__main__":

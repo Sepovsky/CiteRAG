@@ -1,0 +1,542 @@
+{
+  "_description": "CiteRAG evaluation set. Each question requires at least one term from each must_match_any group, and no term from must_not_contain.",
+  "_scoring": "score_answer() requires all groups for ≤2 groups, len(groups)-1 for >2 groups.",
+
+  "sigcomm16_cs2p.pdf": [
+    {
+      "id": "cs2p_problem",
+      "question": "What problem does this paper solve?",
+      "must_match_any": [
+        ["bitrate", "throughput"],
+        ["video", "streaming", "internet video"],
+        ["adaptation", "selection", "prediction"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "cs2p_definition",
+      "question": "What is CS2P?",
+      "must_match_any": [
+        ["cs2p"],
+        ["throughput", "prediction"],
+        ["data-driven", "data driven"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "cs2p_dataset",
+      "question": "What dataset or trace is used?",
+      "must_match_any": [
+        ["20m", "20 m", "20 million", "20m+"],
+        ["session"],
+        ["iqiyi", "i qiyi"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "cs2p_midstream_model",
+      "question": "What model is used for midstream throughput prediction?",
+      "must_match_any": [
+        ["hidden markov", "hmm", "markov model"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "cs2p_initial_error",
+      "question": "By how much does CS2P reduce median initial throughput prediction error compared to prior approaches?",
+      "must_match_any": [
+        ["40%", "40 percent", "forty percent"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "cs2p_midstream_error",
+      "question": "By how much does CS2P reduce median midstream throughput prediction error?",
+      "must_match_any": [
+        ["50%", "50 percent", "fifty percent"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "cs2p_qoe",
+      "question": "What QoE improvement does CS2P achieve over buffer-based adaptation?",
+      "must_match_any": [
+        ["14%", "14 percent", "fourteen percent"],
+        ["buffer", "bb"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "cs2p_contributions",
+      "question": "What are the main contributions of this paper?",
+      "must_match_any": [
+        ["throughput", "dataset", "20m", "session"],
+        ["cs2p", "predictor", "prediction"],
+        ["prototype", "evaluation", "experiment", "simulation"]
+      ],
+      "must_not_contain": ["could not find"]
+    }
+  ],
+
+  "prokhorenkova2018catboost__CatBoost_Unbiased_Boosting_with_Categorical_Features.pdf": [
+    {
+      "id": "catboost_what",
+      "question": "What is CatBoost?",
+      "must_match_any": [
+        ["gradient boosting", "boosting"],
+        ["categorical", "category"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "catboost_key_techniques",
+      "question": "What are the two key algorithmic advances introduced in CatBoost?",
+      "must_match_any": [
+        ["ordered boosting", "permutation"],
+        ["categorical", "category"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "catboost_problem",
+      "question": "What problem does ordered boosting and the categorical feature algorithm solve?",
+      "must_match_any": [
+        ["predictions shift", "target leakage", "leakage"],
+        ["biased", "bias"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "catboost_organization",
+      "question": "Which organization developed CatBoost?",
+      "must_match_any": [
+        ["yandex"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "catboost_comparison",
+      "question": "How does CatBoost compare to other publicly available boosting implementations?",
+      "must_match_any": [
+        ["outperform", "better", "superior"],
+        ["quality", "accuracy"]
+      ],
+      "must_not_contain": ["could not find"]
+    }
+  ],
+
+  "rfc9000__QUIC_A_UDP-Based_Multiplexed_and_Secure_Transport.pdf": [
+    {
+      "id": "quic_what",
+      "question": "What is QUIC?",
+      "must_match_any": [
+        ["transport protocol", "transport"],
+        ["udp"],
+        ["multiplexed", "secure"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "quic_streams",
+      "question": "What does QUIC provide for structured communication?",
+      "must_match_any": [
+        ["flow-controlled", "flow control"],
+        ["stream"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "quic_rfc_number",
+      "question": "What is the RFC number of the QUIC specification?",
+      "must_match_any": [
+        ["9000", "rfc 9000"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "quic_features",
+      "question": "What are the key features of QUIC?",
+      "must_match_any": [
+        ["low-latency", "low latency"],
+        ["connection establishment"],
+        ["network path migration", "path migration"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "quic_security",
+      "question": "What security measures does QUIC include?",
+      "must_match_any": [
+        ["confidentiality", "integrity", "availability"]
+      ],
+      "must_not_contain": ["could not find"]
+    }
+  ],
+
+  "spiteri2016bola__BOLA_Near-Optimal_Bitrate_Adaptation_for_Online_Videos.pdf": [
+    {
+      "id": "bola_what",
+      "question": "What is BOLA?",
+      "must_match_any": [
+        ["bitrate adaptation", "bitrate"],
+        ["online video", "video"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "bola_tradeoff",
+      "question": "What tradeoff does bitrate adaptation involve?",
+      "must_match_any": [
+        ["rebuffer", "freeze"],
+        ["quality", "bitrate"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "bola_segments",
+      "question": "How are video segments encoded for adaptive streaming?",
+      "must_match_any": [
+        ["multiple bitrate", "encoding", "encode"],
+        ["segment"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "bola_approach",
+      "question": "What approach does BOLA use for adaptation?",
+      "must_match_any": [
+        ["buffer-based", "buffer"],
+        ["utility maximization", "optimization"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "bola_near_optimal",
+      "question": "What does the title claim BOLA achieves?",
+      "must_match_any": [
+        ["near-optimal", "near optimal"]
+      ],
+      "must_not_contain": ["could not find"]
+    }
+  ],
+
+  "wen2022transformers__Transformers_in_Time_Series_A_Survey.pdf": [
+    {
+      "id": "ts_survey_what",
+      "question": "What is this paper about?",
+      "must_match_any": [
+        ["survey", "review"],
+        ["transformer", "transformers"],
+        ["time series"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "ts_survey_advantages",
+      "question": "What advantage of Transformers makes them appealing for time series modeling?",
+      "must_match_any": [
+        ["long-range", "long range"],
+        ["dependencies", "interactions", "sequential"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "ts_survey_organization",
+      "question": "Which organization published this survey?",
+      "must_match_any": [
+        ["alibaba"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "ts_survey_taxonomy",
+      "question": "What taxonomy is used to categorize Transformer variants for time series?",
+      "must_match_any": [
+        ["network modification", "architecture", "modification"],
+        ["application domain", "application"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "ts_survey_tasks",
+      "question": "What time series tasks are discussed?",
+      "must_match_any": [
+        ["forecasting"],
+        ["classification"],
+        ["anomaly detection", "detection"]
+      ],
+      "must_not_contain": ["could not find"]
+    }
+  ],
+
+  "zhou2021informer__Informer_Beyond_Efficient_Transformer_for_Long_Sequence_Time-Series_Forecasting.pdf": [
+    {
+      "id": "informer_what",
+      "question": "What is Informer?",
+      "must_match_any": [
+        ["transformer"],
+        ["long sequence", "lstf"],
+        ["time-series", "time series", "forecasting"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "informer_limitations",
+      "question": "What limitations of the vanilla Transformer does Informer address?",
+      "must_match_any": [
+        ["quadratic", "o(l^2)", "o(l2)", "complexity"],
+        ["memory", "bottleneck"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "informer_probattention",
+      "question": "What attention mechanism does Informer use?",
+      "must_match_any": [
+        ["probsparse", "prob sparse", "probabilistic"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "informer_architecture",
+      "question": "What is the high-level architecture of Informer?",
+      "must_match_any": [
+        ["encoder", "decoder"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "informer_application",
+      "question": "What real-world applications require long sequence time-series forecasting?",
+      "must_match_any": [
+        ["electricity", "energy", "power"],
+        ["planning", "consumption"]
+      ],
+      "must_not_contain": ["could not find"]
+    }
+  ],
+
+  "moqtransport2026__Media_over_QUIC_Transport.txt": [
+    {
+      "id": "moqt_what",
+      "question": "What is Media over QUIC Transport (MOQT)?",
+      "must_match_any": [
+        ["publish", "subscribe", "pub/sub"],
+        ["quic", "webtransport"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "moqt_features",
+      "question": "What QUIC features does MOQT leverage?",
+      "must_match_any": [
+        ["stream", "datagram"],
+        ["priorities", "priority", "partial reliability"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "moqt_topology",
+      "question": "How does MOQT operate in terms of network topology?",
+      "must_match_any": [
+        ["point-to-point", "point to point"],
+        ["relay"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "moqt_agnostic",
+      "question": "Is MOQT limited to media use cases?",
+      "must_match_any": [
+        ["media agnostic", "agnostic", "not limited", "wide range"]
+      ],
+      "must_not_contain": ["could not find"]
+    }
+  ],
+
+  "curley2026moqprobe__MoQ_Probe_Extension.html": [
+    {
+      "id": "probe_what",
+      "question": "What does the MoQ PROBE extension do?",
+      "must_match_any": [
+        ["probe"],
+        ["bandwidth", "bitrate", "capacity"],
+        ["padding", "pad"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "probe_problem",
+      "question": "What problem does the PROBE extension solve?",
+      "must_match_any": [
+        ["bandwidth estimation", "available bandwidth"],
+        ["adaptive bitrate", "abr"],
+        ["congestion window", "underestimated"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "probe_mechanism",
+      "question": "How does a subscriber use the PROBE extension?",
+      "must_match_any": [
+        ["bidirectional", "probe stream"],
+        ["target bitrate", "bitrate"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "probe_hop",
+      "question": "How does PROBE handle multi-hop measurements?",
+      "must_match_any": [
+        ["per-hop", "single hop", "hop"],
+        ["relay", "scope"]
+      ],
+      "must_not_contain": ["could not find"]
+    }
+  ],
+
+  "rush2025__RUSH_Reliable_Unreliable_Streaming_Protocol.html": [
+    {
+      "id": "rush_what",
+      "question": "What is RUSH?",
+      "must_match_any": [
+        ["application-level", "application level"],
+        ["live video", "ingesting"],
+        ["protocol"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "rush_rtmp",
+      "question": "What existing protocol was RUSH designed to replace?",
+      "must_match_any": [
+        ["rtmp", "real-time messaging", "real time messaging"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "rush_features",
+      "question": "What features does RUSH provide over RTMP?",
+      "must_match_any": [
+        ["new codec", "codec"],
+        ["multi-track", "track"],
+        ["extensibility", "message type"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "rush_reliability",
+      "question": "How does RUSH provide control over data delivery reliability?",
+      "must_match_any": [
+        ["quic stream", "multi stream", "single stream"],
+        ["reliability", "delivery"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "rush_connect",
+      "question": "How does a client establish a RUSH session?",
+      "must_match_any": [
+        ["quic connection", "quic"],
+        ["bidirectional", "connect stream", "connect frame"]
+      ],
+      "must_not_contain": ["could not find"]
+    }
+  ],
+
+  "warp2023__Warp_Live_Media_Transport_over_QUIC.html": [
+    {
+      "id": "warp_what",
+      "question": "What is Warp?",
+      "must_match_any": [
+        ["live media transport", "media transport"],
+        ["quic"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "warp_objects",
+      "question": "How does Warp structure media for transmission?",
+      "must_match_any": [
+        ["object"],
+        ["quic stream"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "warp_prioritization",
+      "question": "How does Warp handle prioritization during congestion?",
+      "must_match_any": [
+        ["delivery order"],
+        ["priority", "prioritization"],
+        ["drop", "starve"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "warp_relays",
+      "question": "How does Warp treat relays in its design?",
+      "must_match_any": [
+        ["first class", "citizen"],
+        ["relay"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "warp_goal",
+      "question": "What is the main goal of the Warp protocol design?",
+      "must_match_any": [
+        ["low latency", "latency"],
+        ["congestion", "queue"]
+      ],
+      "must_not_contain": ["could not find"]
+    }
+  ],
+
+  "lumous__Realtime_Mobile_Bandwidth_Prediction_Using_LSTM_Neural_Network.pdf": [
+    {
+      "id": "lumous_what",
+      "question": "What is the subject of this paper?",
+      "must_match_any": [
+        ["mobile bandwidth", "bandwidth prediction"],
+        ["lstm", "neural network", "deep learning"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "lumous_method",
+      "question": "What method is used for bandwidth prediction?",
+      "must_match_any": [
+        ["long short term memory", "lstm"],
+        ["recurrent neural network", "rnn"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "lumous_scenarios",
+      "question": "What mobile networking scenarios are studied?",
+      "must_match_any": [
+        ["subway", "bus"],
+        ["route", "mobility"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "lumous_comparison",
+      "question": "What existing algorithm is LSTM compared against?",
+      "must_match_any": [
+        ["recursive least squares", "rls"]
+      ],
+      "must_not_contain": ["could not find"]
+    },
+    {
+      "id": "lumous_organization",
+      "question": "Which organizations contributed to this work?",
+      "must_match_any": [
+        ["new york university", "nyu"],
+        ["huawei"]
+      ],
+      "must_not_contain": ["could not find"]
+    }
+  ]
+}
