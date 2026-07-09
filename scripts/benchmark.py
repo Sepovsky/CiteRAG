@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import json
 import re
@@ -18,8 +19,8 @@ ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "app"
 sys.path.insert(0, str(APP))
 
-from qa import ask_document, format_context, build_prompt
-from ingest import load_pdf, split_pdf
+from langchain_ollama import ChatOllama
+from ingest import load_document, split_document
 from retrieve import HybridRetriever
 
 EVAL_SET_PATH = Path(__file__).resolve().parent / "eval_set.json"
@@ -62,12 +63,43 @@ def score_answer(answer: str, spec: dict) -> tuple[bool, str]:
     return ok, "; ".join(notes) if notes else "all required concept groups matched"
 
 
-async def answer_question(pdf_path: str, question: str) -> tuple[str, list, float]:
+def format_context(docs) -> str:
+    parts = []
+    for doc in docs:
+        page = doc.metadata.get("page", "N/A")
+        parts.append(f"[Page {page}]\n{doc.page_content}")
+    return "\n\n".join(parts)
+
+
+def build_prompt(context: str, query: str) -> str:
+    return f"""You are CiteRAG, a citation-grounded document Q&A assistant.
+
+Answer using only the retrieved context below. Every claim must be traceable to the cited pages.
+
+Context:
+{context}
+
+Question:
+{query}
+
+Instructions:
+- Answer only from the context. Do not use outside knowledge.
+- If the answer is not in the context, say: "I could not find the answer in the document."
+- Be concise (2-4 sentences).
+- End with a line: "Citations: Page X, Page Y" listing every page you used.
+"""
+
+
+async def answer_question(
+    retriever: HybridRetriever, llm: ChatOllama, question: str
+) -> tuple[str, list, float]:
     start = time.perf_counter()
-    answer, docs = await ask_document(pdf_path, question, force_rebuild=False)
+    docs = await asyncio.to_thread(retriever.retrieve, question)
+    context = format_context(docs)
+    response = await llm.ainvoke(build_prompt(context, question))
     elapsed = time.perf_counter() - start
     pages = sorted({doc.metadata.get("page", "N/A") for doc in docs})
-    return answer, pages, elapsed
+    return response.content, pages, elapsed
 
 
 async def main_async(pdf_path: Path) -> int:
@@ -85,15 +117,17 @@ async def main_async(pdf_path: Path) -> int:
     eval_questions = all_evals[pdf_name]
 
     # --- PDF overview ---
-    pages = load_pdf(str(pdf_path))
-    splits = split_pdf(pages)
+    pages = load_document(str(pdf_path))
+    splits = split_document(pages)
     print(f"PDF: {pdf_path.name} — {len(pages)} pages -> {len(splits)} chunks (800 char, 150 overlap)")
 
-    # --- Warm-up / cache build ---
+    # --- Build retriever once, share across all questions ---
     build_start = time.perf_counter()
     retriever = HybridRetriever(str(pdf_path), force_rebuild=False)
     build_s = time.perf_counter() - build_start
     print(f"Index build / cache load: {build_s:.2f}s")
+
+    llm = ChatOllama(model="llama3.1", temperature=0.0)
 
     # --- Run questions ---
     results: list[QuestionResult] = []
@@ -101,7 +135,9 @@ async def main_async(pdf_path: Path) -> int:
 
     for spec in eval_questions:
         print(f"\nQ: {spec['question']}")
-        answer, pages_used, latency = await answer_question(str(pdf_path), spec["question"])
+        answer, pages_used, latency = await answer_question(
+            retriever, llm, spec["question"]
+        )
         correct, notes = score_answer(answer, spec)
         latencies.append(latency)
         results.append(
@@ -124,6 +160,7 @@ async def main_async(pdf_path: Path) -> int:
 
     # --- Cold-start sample ---
     print("\nMeasuring cold-start latency (rebuilds index)...")
+    from qa import ask_document
     cold_start = time.perf_counter()
     await ask_document(str(pdf_path), eval_questions[0]["question"], force_rebuild=True)
     cold_latency = time.perf_counter() - cold_start
@@ -176,8 +213,12 @@ async def main_async(pdf_path: Path) -> int:
 
 
 def main() -> int:
-    if len(sys.argv) > 1:
-        pdf_path = Path(sys.argv[1])
+    parser = argparse.ArgumentParser(description="Benchmark CiteRAG accuracy")
+    parser.add_argument("pdf_path", nargs="?", default=None, help="Path to document")
+    args = parser.parse_args()
+
+    if args.pdf_path:
+        pdf_path = Path(args.pdf_path)
     else:
         pdf_path = ROOT / "data" / "sigcomm16_cs2p.pdf"
 

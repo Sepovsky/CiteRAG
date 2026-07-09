@@ -1,6 +1,9 @@
-"""Document ingestion: load PDFs via pdfplumber for superior text and table extraction."""
+"""Document ingestion: load PDFs, text files, and HTML files."""
+
+from pathlib import Path
 
 import pdfplumber
+from bs4 import BeautifulSoup
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -41,7 +44,33 @@ def load_pdf(file_path: str) -> list[Document]:
     return docs
 
 
-def split_pdf(docs: list[Document]) -> list[Document]:
+def load_text(file_path: str) -> list[Document]:
+    with open(file_path, encoding="utf-8") as f:
+        content = f.read()
+    return [Document(page_content=content, metadata={"page": 1, "source": file_path})]
+
+
+def load_html(file_path: str) -> list[Document]:
+    with open(file_path, encoding="utf-8") as f:
+        content = f.read()
+    soup = BeautifulSoup(content, "html.parser")
+    text = soup.get_text(separator="\n")
+    return [Document(page_content=text, metadata={"page": 1, "source": file_path})]
+
+
+def load_document(file_path: str) -> list[Document]:
+    ext = Path(file_path).suffix.lower()
+    if ext == ".pdf":
+        return load_pdf(file_path)
+    elif ext == ".txt":
+        return load_text(file_path)
+    elif ext in (".html", ".htm"):
+        return load_html(file_path)
+    else:
+        raise ValueError(f"Unsupported file extension: {ext}")
+
+
+def split_document(docs: list[Document]) -> list[Document]:
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP,
@@ -52,8 +81,8 @@ def split_pdf(docs: list[Document]) -> list[Document]:
 if __name__ == "__main__":
     import sys
     path = sys.argv[1] if len(sys.argv) > 1 else "data/sigcomm16_cs2p.pdf"
-    docs = load_pdf(path)
-    splits = split_pdf(docs)
+    docs = load_document(path)
+    splits = split_document(docs)
     print(f"Loaded pages: {len(docs)}")
     print(f"Total chunks:  {len(splits)}")
     print("\nFirst chunk:\n")

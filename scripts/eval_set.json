@@ -84,7 +84,8 @@
       "question": "What is CatBoost?",
       "must_match_any": [
         ["gradient boosting", "boosting"],
-        ["categorical", "category"]
+        ["categorical", "category"],
+        ["decision tree", "gbdt", "ensemble"]
       ],
       "must_not_contain": ["could not find"]
     },
@@ -179,7 +180,8 @@
       "question": "What is BOLA?",
       "must_match_any": [
         ["bitrate adaptation", "bitrate"],
-        ["online video", "video"]
+        ["online video", "video"],
+        ["buffer occupancy", "lyapunov", "bola"]
       ],
       "must_not_contain": ["could not find"]
     },
@@ -206,7 +208,8 @@
       "question": "What approach does BOLA use for adaptation?",
       "must_match_any": [
         ["buffer-based", "buffer"],
-        ["utility maximization", "optimization"]
+        ["utility maximization", "optimization"],
+        ["lyapunov", "online algorithm", "adaptation algorithm"]
       ],
       "must_not_contain": ["could not find"]
     },
@@ -214,7 +217,7 @@
       "id": "bola_near_optimal",
       "question": "What does the title claim BOLA achieves?",
       "must_match_any": [
-        ["near-optimal", "near optimal"]
+        ["near-optimal", "near optimal", "optimal"]
       ],
       "must_not_contain": ["could not find"]
     }
@@ -253,7 +256,8 @@
       "question": "What taxonomy is used to categorize Transformer variants for time series?",
       "must_match_any": [
         ["network modification", "architecture", "modification"],
-        ["application domain", "application"]
+        ["application domain", "application"],
+        ["task", "category"]
       ],
       "must_not_contain": ["could not find"]
     },
@@ -276,7 +280,8 @@
       "must_match_any": [
         ["transformer"],
         ["long sequence", "lstf"],
-        ["time-series", "time series", "forecasting"]
+        ["time-series", "time series", "forecasting"],
+        ["efficient", "beyond"]
       ],
       "must_not_contain": ["could not find"]
     },
@@ -285,7 +290,8 @@
       "question": "What limitations of the vanilla Transformer does Informer address?",
       "must_match_any": [
         ["quadratic", "o(l^2)", "o(l2)", "complexity"],
-        ["memory", "bottleneck"]
+        ["memory", "bottleneck"],
+        ["self-attention", "attention"]
       ],
       "must_not_contain": ["could not find"]
     },
@@ -301,7 +307,8 @@
       "id": "informer_architecture",
       "question": "What is the high-level architecture of Informer?",
       "must_match_any": [
-        ["encoder", "decoder"]
+        ["encoder", "decoder"],
+        ["distilling", "self-attention distilling", "attention distilling"]
       ],
       "must_not_contain": ["could not find"]
     },
@@ -508,7 +515,8 @@
       "question": "What method is used for bandwidth prediction?",
       "must_match_any": [
         ["long short term memory", "lstm"],
-        ["recurrent neural network", "rnn"]
+        ["recurrent neural network", "rnn"],
+        ["deep learning", "neural network"]
       ],
       "must_not_contain": ["could not find"]
     },

@@ -17,7 +17,7 @@ from langchain_core.embeddings import Embeddings
 from rank_bm25 import BM25Okapi
 from transformers import AutoModel, AutoModelForSequenceClassification, AutoTokenizer
 
-from ingest import load_pdf, split_pdf
+from ingest import load_document, split_document
 
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
@@ -105,8 +105,8 @@ def _faiss_path(pdf_path: str) -> Path:
 
 
 def _load_or_build_splits(pdf_path: str) -> List[Document]:
-    docs = load_pdf(pdf_path)
-    return split_pdf(docs)
+    docs = load_document(pdf_path)
+    return split_document(docs)
 
 
 def build_vectorstore(pdf_path: str, force_rebuild: bool = False) -> FAISS:
@@ -134,6 +134,11 @@ def _build_bm25(splits: List[Document]) -> BM25Okapi:
 # ---------------------------------------------------------------------------
 
 def _rrf(result_lists: List[List[Document]], k: int = 60) -> List[Document]:
+    """
+    Reciprocal Rank Fusion is a technique for combining multiple retrieval results into a single ranked list.
+    It is based on the idea that the more relevant a document is to a query, the higher its rank should be.
+    It is a simple and effective way to combine multiple retrieval results into a single ranked list.
+    """
     scores: dict[str, float] = {}
     doc_map: dict[str, Document] = {}
     for docs in result_lists:
