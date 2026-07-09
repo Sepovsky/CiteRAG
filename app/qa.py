@@ -1,10 +1,15 @@
-"""Citation-grounded question answering over retrieved document chunks."""
+"""Citation-grounded question answering with async streaming support."""
 
+import asyncio
+from typing import AsyncGenerator, List, Tuple
+
+from langchain_core.documents import Document
 from langchain_ollama import ChatOllama
-from retrieve import get_retriever
+
+from retrieve import HybridRetriever
 
 
-def format_context(docs):
+def format_context(docs: List[Document]) -> str:
     parts = []
     for doc in docs:
         page = doc.metadata.get("page", "N/A")
@@ -31,22 +36,33 @@ Instructions:
 """
 
 
-def ask_document(document_path: str, query: str):
+async def ask_document(
+    document_path: str, query: str, force_rebuild: bool = False
+) -> Tuple[str, List[Document]]:
     """Retrieve relevant chunks and return a citation-grounded answer."""
-    retriever = get_retriever(document_path)
-    retrieved_docs = retriever.invoke(query)
+    retriever = await asyncio.to_thread(HybridRetriever, document_path, force_rebuild)
+    retrieved_docs = await asyncio.to_thread(retriever.retrieve, query)
     context = format_context(retrieved_docs)
 
-    llm = ChatOllama(
-        model="llama3.1",
-        temperature=0.0,
-    )
-
-    response = llm.invoke(build_prompt(context, query))
+    llm = ChatOllama(model="llama3.1", temperature=0.0)
+    response = await llm.ainvoke(build_prompt(context, query))
     return response.content, retrieved_docs
 
 
-# Backward-compatible alias
+async def stream_answer(
+    document_path: str, query: str, force_rebuild: bool = False
+) -> AsyncGenerator[str | Tuple[str, List[Document]], None]:
+    """Stream answer tokens, then yield ('__docs__', retrieved_docs) as final item."""
+    retriever = await asyncio.to_thread(HybridRetriever, document_path, force_rebuild)
+    retrieved_docs = await asyncio.to_thread(retriever.retrieve, query)
+    context = format_context(retrieved_docs)
+
+    llm = ChatOllama(model="llama3.1", temperature=0.0)
+    async for chunk in llm.astream(build_prompt(context, query)):
+        yield chunk.content
+    yield ("__docs__", retrieved_docs)
+
+
 ask_pdf = ask_document
 
 
@@ -54,14 +70,15 @@ if __name__ == "__main__":
     pdf_path = "data/sigcomm16_cs2p.pdf"
     question = "What problem does this paper solve?"
 
-    answer, docs = ask_document(pdf_path, question)
+    async def _demo():
+        answer, docs = await ask_document(pdf_path, question)
+        print("\nAnswer:\n")
+        print(answer)
+        print("\nRetrieved chunks:\n")
+        for i, doc in enumerate(docs, 1):
+            page = doc.metadata.get("page", "N/A")
+            print(f"--- Chunk {i} (Page {page}) ---")
+            print(doc.page_content[:700])
+            print()
 
-    print("\nAnswer:\n")
-    print(answer)
-
-    print("\nRetrieved chunks:\n")
-    for i, doc in enumerate(docs, 1):
-        page = doc.metadata.get("page", "N/A")
-        print(f"--- Chunk {i} (Page {page}) ---")
-        print(doc.page_content[:700])
-        print()
+    asyncio.run(_demo())

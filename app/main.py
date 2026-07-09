@@ -1,7 +1,13 @@
-from qa import ask_document
+"""Async interactive CLI for CiteRAG with streaming output."""
+
+import asyncio
+from typing import List
+
+from langchain_core.documents import Document
+from qa import stream_answer
 
 
-def main():
+async def main():
     document_path = "data/sigcomm16_cs2p.pdf"
 
     print("CiteRAG — Citation-Grounded RAG for Document QA")
@@ -15,14 +21,22 @@ def main():
         if not question:
             continue
 
-        answer, docs = ask_document(document_path, question)
         print("\nAnswer:\n")
-        print(answer)
+        answer_parts: List[str] = []
+        docs: List[Document] = []
+
+        async for item in stream_answer(document_path, question):
+            if isinstance(item, tuple) and item[0] == "__docs__":
+                docs = item[1]
+            else:
+                print(item, end="", flush=True)
+                answer_parts.append(item)
 
         pages = sorted({doc.metadata.get("page", "N/A") for doc in docs})
-        print("\nRetrieved source pages:", pages)
+        if pages:
+            print("\n\nRetrieved source pages:", pages)
         print("\n" + "=" * 60 + "\n")
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
