@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Benchmark CiteRAG accuracy and end-to-end latency on any PDF in the eval set."""
+"""Benchmark CiteRAG accuracy and end-to-end latency on any PDF in the eval set.
+Supports --kg flag to enable knowledge-graph augmented retrieval with audit trails."""
 
 from __future__ import annotations
 
@@ -10,7 +11,7 @@ import re
 import statistics
 import sys
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 import pdfplumber
@@ -28,6 +29,14 @@ RESULTS_DIR = Path(__file__).resolve().parent
 
 
 @dataclass
+class AuditTrailResult:
+    query_entities: list[str] = field(default_factory=list)
+    expanded_entities: list[str] = field(default_factory=list)
+    graph_paths: list[dict] = field(default_factory=list)
+    retrieved_chunks: list[dict] = field(default_factory=list)
+
+
+@dataclass
 class QuestionResult:
     id: str
     question: str
@@ -36,6 +45,7 @@ class QuestionResult:
     latency_s: float
     source_pages: list
     scoring_notes: str
+    audit_trail: AuditTrailResult | None = None
 
 
 def normalize(text: str) -> str:
@@ -91,18 +101,28 @@ Instructions:
 
 
 async def answer_question(
-    retriever: HybridRetriever, llm: ChatOllama, question: str
-) -> tuple[str, list, float]:
+    retriever: HybridRetriever | "HybridGraphRetriever", llm: ChatOllama, question: str, use_kg: bool = False
+) -> tuple[str, list, float, AuditTrailResult | None]:
     start = time.perf_counter()
-    docs = await asyncio.to_thread(retriever.retrieve, question)
+    if use_kg:
+        docs, audit = await asyncio.to_thread(retriever.retrieve, question)
+        audit_result = AuditTrailResult(
+            query_entities=audit.query_entities,
+            expanded_entities=audit.expanded_entities,
+            graph_paths=audit.triples_used,
+            retrieved_chunks=[{"page": p} for p in audit.retrieved_pages],
+        )
+    else:
+        docs = await asyncio.to_thread(retriever.retrieve, question)
+        audit_result = None
     context = format_context(docs)
     response = await llm.ainvoke(build_prompt(context, question))
     elapsed = time.perf_counter() - start
     pages = sorted({doc.metadata.get("page", "N/A") for doc in docs})
-    return response.content, pages, elapsed
+    return response.content, pages, elapsed, audit_result
 
 
-async def main_async(pdf_path: Path) -> int:
+async def main_async(pdf_path: Path, use_kg: bool = False) -> int:
     pdf_name = pdf_path.name
 
     with open(EVAL_SET_PATH) as f:
@@ -127,6 +147,17 @@ async def main_async(pdf_path: Path) -> int:
     build_s = time.perf_counter() - build_start
     print(f"Index build / cache load: {build_s:.2f}s")
 
+    # --- Optionally build / load knowledge graph ---
+    kg_build_s = 0.0
+    kg = None
+    if use_kg:
+        from graph_rag import HybridGraphRetriever, build_kg_for_document
+        kg_start = time.perf_counter()
+        kg = build_kg_for_document(str(pdf_path))
+        kg_build_s = time.perf_counter() - kg_start
+        print(f"KG build / load: {kg_build_s:.2f}s ({kg.stats})")
+        retriever = HybridGraphRetriever(str(pdf_path), kg=kg)
+
     llm = ChatOllama(model="llama3.1", temperature=0.0)
 
     # --- Run questions ---
@@ -135,8 +166,8 @@ async def main_async(pdf_path: Path) -> int:
 
     for spec in eval_questions:
         print(f"\nQ: {spec['question']}")
-        answer, pages_used, latency = await answer_question(
-            retriever, llm, spec["question"]
+        answer, pages_used, latency, audit = await answer_question(
+            retriever, llm, spec["question"], use_kg=use_kg
         )
         correct, notes = score_answer(answer, spec)
         latencies.append(latency)
@@ -149,10 +180,14 @@ async def main_async(pdf_path: Path) -> int:
                 latency_s=round(latency, 2),
                 source_pages=pages_used,
                 scoring_notes=notes,
+                audit_trail=audit,
             )
         )
         mark = "PASS" if correct else "FAIL"
-        print(f"  [{mark}] {latency:.2f}s | pages={pages_used}")
+        audit_info = ""
+        if audit and audit.query_entities:
+            audit_info = f" | KG entities: {audit.query_entities}"
+        print(f"  [{mark}] {latency:.2f}s | pages={pages_used}{audit_info}")
         print(f"  {answer.strip()[:220]}...")
 
     correct_count = sum(1 for r in results if r.correct)
@@ -177,6 +212,7 @@ async def main_async(pdf_path: Path) -> int:
         "top_k_sparse": 10,
         "top_k_rerank": 3,
         "index_build_or_load_s": round(build_s, 2),
+        "use_kg": use_kg,
         "accuracy": {
             "correct": correct_count,
             "total": total,
@@ -193,6 +229,12 @@ async def main_async(pdf_path: Path) -> int:
         "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
         "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
     }
+    if use_kg:
+        summary["kg_build_or_load_s"] = round(kg_build_s, 2)
+        try:
+            summary["kg_stats"] = kg.kg.stats if use_kg else ""
+        except Exception:
+            pass
 
     results_path = RESULTS_DIR / f"benchmark_{pdf_path.stem}.json"
     output = {
@@ -215,6 +257,7 @@ async def main_async(pdf_path: Path) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Benchmark CiteRAG accuracy")
     parser.add_argument("pdf_path", nargs="?", default=None, help="Path to document")
+    parser.add_argument("--kg", action="store_true", help="Enable knowledge graph augmentation")
     args = parser.parse_args()
 
     if args.pdf_path:
@@ -226,7 +269,7 @@ def main() -> int:
         print(f"ERROR: PDF not found at {pdf_path}")
         return 1
 
-    return asyncio.run(main_async(pdf_path))
+    return asyncio.run(main_async(pdf_path, use_kg=args.kg))
 
 
 if __name__ == "__main__":
