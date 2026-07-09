@@ -60,7 +60,7 @@ flowchart LR
 ## Tech stack
 
 | Layer | Tool |
-|---|---|---|
+|---|---|
 | Orchestration | LangChain |
 | Document loading | pdfplumber (PDF), BeautifulSoup (HTML) |
 | Dense embeddings | MiniLM-L6 (HuggingFace Transformers) |
