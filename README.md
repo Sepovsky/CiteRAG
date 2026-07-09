@@ -2,25 +2,28 @@
 
 > Verifiable, source-grounded answers from PDF documents — fully local, no API key required.
 
-**CiteRAG** is an end-to-end **Retrieval-Augmented Generation (RAG)** pipeline with **hybrid retrieval (dense + sparse)**, cross-encoder reranking, and **page-level citations**. Built with LangChain, FAISS, BM25, Hugging Face Transformers, and Ollama for fully local, grounded inference.
+**CiteRAG** is an end-to-end **Retrieval-Augmented Generation (RAG)** pipeline with **hybrid retrieval (dense + sparse)**, cross-encoder reranking, and **page-level citations**. Built with LangChain, FAISS, BM25, Hugging Face Transformers, and Ollama for fully local, grounded inference. Supports PDF, TXT, and HTML documents.
 
 
 ---
 
 ## How it works
 
-```
-PDF → Load (pdfplumber) → Chunk → Embed (MiniLM-L6)
-                                        ↓
-               User question → Dense retrieval (FAISS, top-10)
-                                       +
-                              Sparse retrieval (BM25, top-10)
-                                        ↓
-                           Reciprocal Rank Fusion
-                                        ↓
-                           Cross-encoder reranker → Top-3
-                                        ↓
-               Ollama (Llama 3.1) → Citation-grounded answer + page sources
+```mermaid
+flowchart LR
+    A[Document<br/>PDF / TXT / HTML] --> B[Load & Chunk<br/>800 chars]
+    B --> C[Embeddings<br/>MiniLM-L6]
+    C --> D[FAISS<br/>Vector Store]
+    E[User Question] --> F[Dense Search<br/>FAISS top-10]
+    E --> G[Sparse Search<br/>BM25 top-10]
+    D --> F
+    B --> G
+    F --> H[RRF Fusion]
+    G --> H
+    H --> I[Cross-encoder<br/>Reranker]
+    I --> J[Top-3 Chunks]
+    J --> K[Ollama<br/>Llama 3.1]
+    K --> L[Answer +<br/>Page Citations]
 ```
 
 ---
@@ -30,7 +33,7 @@ PDF → Load (pdfplumber) → Chunk → Embed (MiniLM-L6)
 - End-to-end RAG pipeline with hybrid retrieval (dense + sparse)
 - Cross-encoder reranking for high-precision top-3 results
 - Page-level citations on every answer for verifiable, source-grounded responses
-- pdfplumber for robust PDF text and table extraction
+- pdfplumber for robust PDF text and table extraction, BeautifulSoup for HTML
 - Custom Transformer embeddings (avoids broken `sentence-transformers` dependency)
 - Persistent FAISS vector store with PDF fingerprint caching
 - Fully offline inference via Ollama — no cloud API key needed
@@ -42,7 +45,7 @@ PDF → Load (pdfplumber) → Chunk → Embed (MiniLM-L6)
 | Layer | Tool |
 |---|---|
 | Orchestration | LangChain |
-| PDF parsing | pdfplumber |
+| Document loading | pdfplumber (PDF), BeautifulSoup (HTML) |
 | Dense embeddings | MiniLM-L6 (HuggingFace Transformers) |
 | Sparse retrieval | BM25 via `rank-bm25` |
 | Fusion | Reciprocal Rank Fusion |
@@ -58,14 +61,14 @@ PDF → Load (pdfplumber) → Chunk → Embed (MiniLM-L6)
 ```
 CiteRAG/
 ├── app/
-│   ├── ingest.py       # Load PDF via pdfplumber and split into chunks
+│   ├── ingest.py       # Load PDF/TXT/HTML via pdfplumber/BeautifulSoup
 │   ├── retrieve.py     # Hybrid retriever (FAISS + BM25 + reranker)
 │   ├── qa.py           # Async citation-grounded Q&A with streaming
 │   └── main.py         # Async interactive CLI with streaming output
-├── data/
-│   └── sample.pdf
+├── data/               # Source documents
 ├── scripts/
-│   └── benchmark.py    # Accuracy and latency eval
+│   ├── benchmark.py    # Accuracy and latency eval (argparse CLI)
+│   └── eval_set.json   # 56 evaluation questions across 11 documents
 ├── vector_store/
 │   └── faiss_*         # Cached FAISS indexes (per PDF fingerprint)
 ├── requirements.txt
@@ -120,7 +123,7 @@ cp your-document.pdf data/
 Run each step individually to test, or jump straight to the interactive CLI:
 
 ```bash
-# Step 1 — test PDF loading and chunking
+# Step 1 — test document loading and chunking (PDF, TXT, or HTML)
 python app/ingest.py data/your-document.pdf
 
 # Step 2 — test hybrid retrieval
@@ -145,10 +148,10 @@ python app/main.py
 
 ## Benchmark
 
-Run the accuracy and latency benchmark (requires Ollama and a PDF in `data/`):
+Run the accuracy and latency benchmark (requires Ollama and a document in `data/`):
 
 ```bash
-python scripts/benchmark.py
+python scripts/benchmark.py data/your-document.pdf
 ```
 
 ---
