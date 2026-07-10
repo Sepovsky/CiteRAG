@@ -96,13 +96,16 @@ class KnowledgeGraph:
             label = self.graph.nodes[node_id].get("label", node_id).lower()
             label_words = set(label.split())
 
+            # Count of shared words between query and label
             overlap = len(query_words & label_words)
             if overlap > 0:
                 scored.append((node_id, overlap))
 
+            # If the query is a substring of the label or the label is a substring of the query
             if query_lower in label or label in query_lower:
                 scored.append((node_id, 10.0))
-
+                
+            # If the query is a substring of the node_id or the node_id is a substring of the query
             if node_id in query_lower or query_lower in node_id:
                 scored.append((node_id, 5.0))
 
